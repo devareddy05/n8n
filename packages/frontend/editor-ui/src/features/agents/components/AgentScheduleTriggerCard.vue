@@ -13,11 +13,20 @@ import {
 	updateScheduleIntegration,
 } from '../composables/useAgentApi';
 
-const props = defineProps<{
-	projectId: string;
-	agentId: string;
-	isPublished: boolean;
-}>();
+const props = withDefaults(
+	defineProps<{
+		projectId: string;
+		agentId: string;
+		isPublished: boolean;
+		/**
+		 * Bumped by the parent when the agent config changes outside this
+		 * component (e.g. the builder LLM patched the schedule integration).
+		 * Triggers a re-fetch so the card mirrors the persisted state.
+		 */
+		reloadToken?: number;
+	}>(),
+	{ reloadToken: 0 },
+);
 
 const emit = defineEmits<{
 	'status-change': [active: boolean];
@@ -215,6 +224,17 @@ async function onDeactivate() {
 onMounted(() => {
 	void loadConfig();
 });
+
+watch(
+	() => props.reloadToken,
+	(next, prev) => {
+		if (next === prev) return;
+		// Re-enter hydrating mode so the cron/wakeUpPrompt watchers don't fire
+		// a redundant save while the freshly loaded values are being applied.
+		hydrating.value = true;
+		void loadConfig();
+	},
+);
 </script>
 
 <template>
