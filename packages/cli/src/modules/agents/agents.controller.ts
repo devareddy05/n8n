@@ -656,7 +656,8 @@ export class AgentsController {
 			(i) => isAgentCredentialIntegration(i) && i.type === type && i.credentialId === credentialId,
 		);
 		if (!alreadyExists) {
-			agent.integrations = [...existing, { type, credentialId }];
+			const credential = await this.credentialsService.getOne(req.user, credentialId, false);
+			agent.integrations = [...existing, { type, credentialId, credentialName: credential.name }];
 			await this.agentRepository.save(agent);
 		}
 
